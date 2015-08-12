@@ -11,44 +11,64 @@ apply plugin: 'com.android.application'
 apply plugin: 'com.neenbedankt.android-apt'
 
 android {
-  compileSdkVersion 19
-  buildToolsVersion '19.1.0'
+    def globalConfiguration = rootProject.extensions.getByName("ext")
 
-  defaultConfig {
-    applicationId "com.fernandocejas.android10.sample.presentation"
-    minSdkVersion 15
-    targetSdkVersion 19
-    versionCode 1
-    versionName "1.0"
-    testInstrumentationRunner "com.google.android.apps.common.testing.testrunner.GoogleInstrumentationTestRunner"
-  }
+    compileSdkVersion globalConfiguration.getAt("androidCompileSdkVersion")
+    buildToolsVersion globalConfiguration.getAt("androidBuildToolsVersion")
 
-  packagingOptions {
-    exclude 'LICENSE.txt'
-    exclude 'META-INF/DEPENDENCIES'
-    exclude 'META-INF/ASL2.0'
-    exclude 'META-INF/NOTICE'
-    exclude 'META-INF/LICENSE'
-  }
+    defaultConfig {
+        minSdkVersion globalConfiguration.getAt("androidMinSdkVersion")
+        targetSdkVersion globalConfiguration.getAt("androidTargetSdkVersion")
 
-  lintOptions {
-    abortOnError false;
-    disable 'InvalidPackage' // Some libraries have issues with this.
-    disable 'OldTargetApi' // Lint gives this warning but SDK 20 would be Android L Beta.
-    disable 'IconDensities' // For testing purpose. This is safe to remove.
-    disable  'MissingPrefix'
-  }
-
-  buildTypes {
-    release {
-      runProguard false
-      proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        applicationId globalConfiguration.getAt("androidApplicationId")
+        versionCode globalConfiguration.getAt("androidVersionCode")
+        versionName globalConfiguration.getAt("androidVersionName")
+        testInstrumentationRunner globalConfiguration.getAt("testInstrumentationRunner")
+        testApplicationId globalConfiguration.getAt("testApplicationId")
     }
-  }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_7
+        targetCompatibility JavaVersion.VERSION_1_7
+    }
+
+    packagingOptions {
+        exclude 'LICENSE.txt'
+        exclude 'META-INF/DEPENDENCIES'
+        exclude 'META-INF/ASL2.0'
+        exclude 'META-INF/NOTICE'
+        exclude 'META-INF/LICENSE'
+    }
+
+    lintOptions {
+        quiet true
+        abortOnError false
+        ignoreWarnings true
+        disable 'InvalidPackage'            //Some libraries have issues with this.
+        disable 'OldTargetApi'
+        //Lint gives this warning but SDK 20 would be Android L Beta.
+        disable 'IconDensities'             //For testing purpose. This is safe to remove.
+        disable 'IconMissingDensityFolder'  //For testing purpose. This is safe to remove.
+    }
+
+    signingConfigs {
+        debug {
+            storeFile file('../buildsystem/debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
+    }
 }
 
 ext {
-    robobindingVersion = 'latest.integration'
+    robobindingVersion = '0.8.10'
 }
 
 repositories {
@@ -60,20 +80,30 @@ repositories {
 }
 
 dependencies {
-  def domainLayer = project(':domain')
-  def dataLayer = project(':data')
+    def presentationDependencies = rootProject.ext.presentationDependencies
+    def presentationTestDependencies = rootProject.ext.presentationTestDependencies
 
-  //project dependencies
-  compile domainLayer
-  compile dataLayer
-    compile ("org.robobinding:robobinding:$robobindingVersion:with-dependencies") {
-        exclude group: 'com.google.guava', module: 'guava'
-    }
+    compile project(':domain')
+    compile project(':data')
+    compile 'com.google.guava:guava:18.0'
+    compile "org.robobinding:robobinding:$robobindingVersion:"
 
-    apt "org.robobinding:codegen:$robobindingVersion"
+//            {
+//              exclude group: 'com.google.guava', module: 'guava'
+//            }
 
-  //compile this only for testing. I had to use a workaround for using Espresso (it is not in the
-  //maven central repository): since both Mockito and Espresso use 'hamcrest' I had to remove them
-  //on the mockito library: "zip -d mockito.jar org/hamcrest/*"
-  androidTestCompile fileTree(dir: 'testLibs', include: '*.jar')
+    apt presentationDependencies.daggerCompiler
+    compile presentationDependencies.dagger
+    compile presentationDependencies.butterKnife
+    compile presentationDependencies.recyclerView
+    compile presentationDependencies.rxJava
+    compile presentationDependencies.rxAndroid
+    provided presentationDependencies.javaxAnnotation
+  apt "org.robobinding:codegen:$robobindingVersion"
+
+//  androidTestCompile presentationTestDependencies.mockito
+//  androidTestCompile presentationTestDependencies.dexmaker
+//  androidTestCompile presentationTestDependencies.dexmakerMockito
+//  androidTestCompile presentationTestDependencies.espresso
+//  androidTestCompile presentationTestDependencies.testingSupportLib
 }

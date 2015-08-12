@@ -1,11 +1,24 @@
 /**
- * Copyright (C) 2014 android10.org. All rights reserved.
- * @author Fernando Cejas (the android10 coder)
+ * Copyright (C) 2015 Fernando Cejas Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.fernandocejas.android10.sample.data.repository.datasource;
 
 import com.fernandocejas.android10.sample.data.cache.UserCache;
 import com.fernandocejas.android10.sample.data.entity.UserEntity;
+import java.util.List;
+import rx.Observable;
 
 /**
  * {@link UserDataStore} implementation based on file system data store.
@@ -23,32 +36,12 @@ public class DiskUserDataStore implements UserDataStore {
     this.userCache = userCache;
   }
 
-  /**
-   * {@inheritDoc}
-   *
-   * @param userListCallback A {@link UserListCallback} used for notifying clients.
-   */
-  @Override public void getUsersEntityList(UserListCallback userListCallback) {
+  @Override public Observable<List<UserEntity>> userEntityList() {
     //TODO: implement simple cache for storing/retrieving collections of users.
     throw new UnsupportedOperationException("Operation is not available!!!");
   }
 
-  /**
-   * {@inheritDoc}
-   *
-   * @param id The id to retrieve user data.
-   * @param userDetailsCallback A {@link UserDataStore.UserDetailsCallback} to notify the client.
-   */
-  @Override public void getUserEntityDetails(int id,
-      final UserDetailsCallback userDetailsCallback) {
-    this.userCache.get(id, new UserCache.UserCacheCallback() {
-      @Override public void onUserEntityLoaded(UserEntity userEntity) {
-        userDetailsCallback.onUserEntityLoaded(userEntity);
-      }
-
-      @Override public void onError(Exception exception) {
-        userDetailsCallback.onError(exception);
-      }
-    });
+  @Override public Observable<UserEntity> userEntityDetails(final int userId) {
+     return this.userCache.get(userId);
   }
 }

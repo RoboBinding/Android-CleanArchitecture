@@ -1,5 +1,6 @@
 /**
  * Copyright (C) 2014 android10.org. All rights reserved.
+ *
  * @author Fernando Cejas (the android10 coder)
  */
 package com.fernandocejas.android10.sample.presentation.view.fragment;
@@ -10,42 +11,29 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
-import android.widget.Button;
-import android.widget.ListView;
 import android.widget.RelativeLayout;
 
-import com.fernandocejas.android10.sample.data.cache.FileManager;
-import com.fernandocejas.android10.sample.data.cache.UserCache;
-import com.fernandocejas.android10.sample.data.cache.UserCacheImpl;
-import com.fernandocejas.android10.sample.data.cache.serializer.JsonSerializer;
-import com.fernandocejas.android10.sample.data.entity.mapper.UserEntityDataMapper;
-import com.fernandocejas.android10.sample.data.executor.JobExecutor;
-import com.fernandocejas.android10.sample.data.repository.UserDataRepository;
-import com.fernandocejas.android10.sample.data.repository.datasource.UserDataStoreFactory;
-import com.fernandocejas.android10.sample.domain.exception.ErrorBundle;
-import com.fernandocejas.android10.sample.domain.executor.PostExecutionThread;
-import com.fernandocejas.android10.sample.domain.executor.ThreadExecutor;
-import com.fernandocejas.android10.sample.domain.interactor.GetUserListUseCase;
-import com.fernandocejas.android10.sample.domain.interactor.GetUserListUseCaseImpl;
-import com.fernandocejas.android10.sample.domain.repository.UserRepository;
 import com.fernandocejas.android10.sample.presentation.R;
-import com.fernandocejas.android10.sample.presentation.UIThread;
-import com.fernandocejas.android10.sample.presentation.exception.ErrorMessageFactory;
-import com.fernandocejas.android10.sample.presentation.mapper.UserModelDataMapper;
+import com.fernandocejas.android10.sample.presentation.internal.di.components.DaggerUserComponent;
+import com.fernandocejas.android10.sample.presentation.internal.di.components.UserComponent;
+import com.fernandocejas.android10.sample.presentation.internal.di.modules.ViewModelModule;
+import com.fernandocejas.android10.sample.presentation.internal.di.modules.ViewModule;
 import com.fernandocejas.android10.sample.presentation.model.UserModel;
 import com.fernandocejas.android10.sample.presentation.viewmodel.UserListView;
 import com.fernandocejas.android10.sample.presentation.viewmodel.UserListViewModel;
 
 import org.robobinding.ViewBinder;
 
-import java.util.Collection;
+import javax.inject.Inject;
 
 /**
  * Fragment that shows a list of Users.
  */
 public class UserListFragment extends BaseFragment implements UserListView {
-    private UserListViewModel viewModel;
+
+    @Inject
+    UserListViewModel viewModel;
+
     /**
      * Interface for listening user list events.
      */
@@ -53,7 +41,9 @@ public class UserListFragment extends BaseFragment implements UserListView {
         void onUserClicked(final UserModel userModel);
     }
 
+
     private RelativeLayout rl_progress;
+
     private UserListListener userListListener;
 
     public UserListFragment() {
@@ -66,6 +56,12 @@ public class UserListFragment extends BaseFragment implements UserListView {
         if (activity instanceof UserListListener) {
             this.userListListener = (UserListListener) activity;
         }
+    }
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        this.initialize();
     }
 
     @Override
@@ -85,27 +81,39 @@ public class UserListFragment extends BaseFragment implements UserListView {
     }
 
     @Override
-    protected void initializeViewModel() {
-        // All these dependency initialization could have been avoided using a
-        // dependency injection framework. But in this case are used this way for
-        // LEARNING EXAMPLE PURPOSE.
-        ThreadExecutor threadExecutor = JobExecutor.getInstance();
-        PostExecutionThread postExecutionThread = UIThread.getInstance();
+    public void onResume() {
+        super.onResume();
+//    this.userListPresenter.resume();
+    }
 
-        JsonSerializer userCacheSerializer = new JsonSerializer();
-        UserCache userCache = UserCacheImpl.getInstance(getActivity(), userCacheSerializer,
-                FileManager.getInstance(), threadExecutor);
-        UserDataStoreFactory userDataStoreFactory =
-                new UserDataStoreFactory(this.getContext(), userCache);
-        UserEntityDataMapper userEntityDataMapper = new UserEntityDataMapper();
-        UserRepository userRepository = UserDataRepository.getInstance(userDataStoreFactory,
-                userEntityDataMapper);
+    @Override
+    public void onPause() {
+        super.onPause();
+//    this.userListPresenter.pause();
+    }
 
-        GetUserListUseCase getUserListUseCase = new GetUserListUseCaseImpl(userRepository,
-                threadExecutor, postExecutionThread);
-        UserModelDataMapper userModelDataMapper = new UserModelDataMapper();
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+//    this.userListPresenter.destroy();
+    }
 
-        this.viewModel = new UserListViewModel(this, getUserListUseCase, userModelDataMapper);
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+    }
+
+    private UserComponent userComponent;
+
+    private void initialize() {
+        this.userComponent = DaggerUserComponent.builder()
+                .applicationComponent(getApplicationComponent())
+                .activityModule(getActivityModule())
+                .viewModelModule(new ViewModelModule())
+                .viewModule(new ViewModule(this))
+                .build();
+
+        userComponent.inject(this);
     }
 
     @Override
@@ -121,6 +129,14 @@ public class UserListFragment extends BaseFragment implements UserListView {
     }
 
     @Override
+    public void showRetry() {
+    }
+
+    @Override
+    public void hideRetry() {
+    }
+
+    @Override
     public void viewUser(UserModel userModel) {
         if (this.userListListener != null) {
             this.userListListener.onUserClicked(userModel);
@@ -128,14 +144,12 @@ public class UserListFragment extends BaseFragment implements UserListView {
     }
 
     @Override
-    public void showError(ErrorBundle errorBundle) {
-        String errorMessage = ErrorMessageFactory.create(getContext(),
-                errorBundle.getException());
-
-        this.showToastMessage(errorMessage);
+    public void showError(String message) {
+        this.showToastMessage(message);
     }
 
-    private Context getContext() {
+    @Override
+    public Context getContext() {
         return this.getActivity().getApplicationContext();
     }
 }

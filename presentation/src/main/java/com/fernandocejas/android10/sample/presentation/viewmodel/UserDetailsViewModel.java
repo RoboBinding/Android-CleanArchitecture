@@ -1,8 +1,10 @@
 package com.fernandocejas.android10.sample.presentation.viewmodel;
 
 import com.fernandocejas.android10.sample.domain.User;
+import com.fernandocejas.android10.sample.domain.exception.DefaultErrorBundle;
 import com.fernandocejas.android10.sample.domain.exception.ErrorBundle;
-import com.fernandocejas.android10.sample.domain.interactor.GetUserDetailsUseCase;
+import com.fernandocejas.android10.sample.domain.interactor.DefaultSubscriber;
+import com.fernandocejas.android10.sample.domain.interactor.UseCase;
 import com.fernandocejas.android10.sample.presentation.exception.ErrorMessageFactory;
 import com.fernandocejas.android10.sample.presentation.mapper.UserModelDataMapper;
 import com.fernandocejas.android10.sample.presentation.model.UserModel;
@@ -23,7 +25,7 @@ public class UserDetailsViewModel implements HasPresentationModelChangeSupport {
     private int userId;
 
     private final UserDetailsView viewDetailsView;
-    private final GetUserDetailsUseCase getUserDetailsUseCase;
+    private final UseCase getUserDetailsUseCase;
     private final UserModelDataMapper userModelDataMapper;
 
     private boolean retryVisible;
@@ -32,7 +34,7 @@ public class UserDetailsViewModel implements HasPresentationModelChangeSupport {
     private final PresentationModelChangeSupport changeSupport;
 
     public UserDetailsViewModel(UserDetailsView userDetailsView,
-                                GetUserDetailsUseCase getUserDetailsUseCase, UserModelDataMapper userModelDataMapper) {
+                                UseCase getUserDetailsUseCase, UserModelDataMapper userModelDataMapper) {
         this.viewDetailsView = userDetailsView;
         this.getUserDetailsUseCase = getUserDetailsUseCase;
         this.userModelDataMapper = userModelDataMapper;
@@ -74,23 +76,40 @@ public class UserDetailsViewModel implements HasPresentationModelChangeSupport {
     }
 
     private void getUserDetails() {
-        this.getUserDetailsUseCase.execute(this.userId, this.userDetailsCallback);
+        this.getUserDetailsUseCase.execute(new UserDetailsSubscriber());
     }
 
-    private final GetUserDetailsUseCase.Callback userDetailsCallback = new GetUserDetailsUseCase.Callback() {
-        @Override
-        public void onUserDataLoaded(User user) {
-            UserDetailsViewModel.this.showUserDetailsInView(user);
+//    private final GetUserDetailsUseCase.Callback userDetailsCallback = new GetUserDetailsUseCase.Callback() {
+//        @Override
+//        public void onUserDataLoaded(User user) {
+//            UserDetailsViewModel.this.showUserDetailsInView(user);
+//            UserDetailsViewModel.this.hideViewLoading();
+//        }
+//
+//        @Override
+//        public void onError(ErrorBundle errorBundle) {
+//            UserDetailsViewModel.this.hideViewLoading();
+//            UserDetailsViewModel.this.showErrorMessage(errorBundle);
+//            UserDetailsViewModel.this.showViewRetry();
+//        }
+//    };
+
+    private final class UserDetailsSubscriber extends DefaultSubscriber<User> {
+
+        @Override public void onCompleted() {
             UserDetailsViewModel.this.hideViewLoading();
         }
 
-        @Override
-        public void onError(ErrorBundle errorBundle) {
+        @Override public void onError(Throwable e) {
             UserDetailsViewModel.this.hideViewLoading();
-            UserDetailsViewModel.this.showErrorMessage(errorBundle);
+            UserDetailsViewModel.this.showErrorMessage(new DefaultErrorBundle((Exception) e));
             UserDetailsViewModel.this.showViewRetry();
         }
-    };
+
+        @Override public void onNext(User user) {
+            UserDetailsViewModel.this.showUserDetailsInView(user);
+        }
+    }
 
     private void showUserDetailsInView(User user) {
         userModel = this.userModelDataMapper.transform(user);
@@ -127,7 +146,9 @@ public class UserDetailsViewModel implements HasPresentationModelChangeSupport {
     }
 
     private void showErrorMessage(ErrorBundle errorBundle) {
-        this.viewDetailsView.showError(errorBundle);
+        String errorMessage = ErrorMessageFactory.create(this.viewDetailsView.getContext(),
+                errorBundle.getException());
+        this.viewDetailsView.showError(errorMessage);
     }
 
     private void hideViewLoading() {

@@ -1,13 +1,26 @@
 /**
- * Copyright (C) 2014 android10.org. All rights reserved.
- * @author Fernando Cejas (the android10 coder)
+ * Copyright (C) 2015 Fernando Cejas Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.fernandocejas.android10.sample.data.repository.datasource;
 
 import com.fernandocejas.android10.sample.data.cache.UserCache;
 import com.fernandocejas.android10.sample.data.entity.UserEntity;
 import com.fernandocejas.android10.sample.data.net.RestApi;
-import java.util.Collection;
+import java.util.List;
+import rx.Observable;
+import rx.functions.Action1;
 
 /**
  * {@link UserDataStore} implementation based on connections to the api (Cloud).
@@ -16,6 +29,13 @@ public class CloudUserDataStore implements UserDataStore {
 
   private final RestApi restApi;
   private final UserCache userCache;
+
+  private final Action1<UserEntity> saveToCacheAction =
+      userEntity -> {
+        if (userEntity != null) {
+          CloudUserDataStore.this.userCache.put(userEntity);
+        }
+      };
 
   /**
    * Construct a {@link UserDataStore} based on connections to the api (Cloud).
@@ -28,51 +48,12 @@ public class CloudUserDataStore implements UserDataStore {
     this.userCache = userCache;
   }
 
-  /**
-   * {@inheritDoc}
-   *
-   * @param userListCallback A {@link UserListCallback} used for notifying clients.
-   */
-  @Override public void getUsersEntityList(final UserListCallback userListCallback) {
-    this.restApi.getUserList(new RestApi.UserListCallback() {
-      @Override public void onUserListLoaded(Collection<UserEntity> usersCollection) {
-        userListCallback.onUserListLoaded(usersCollection);
-      }
-
-      @Override public void onError(Exception exception) {
-        userListCallback.onError(exception);
-      }
-    });
+  @Override public Observable<List<UserEntity>> userEntityList() {
+    return this.restApi.userEntityList();
   }
 
-  /**
-   * {@inheritDoc}
-   *
-   * @param id The user id used to retrieve user data.
-   * @param userDetailsCallback A {@link UserDetailsCallback} used for notifying clients.
-   */
-  @Override public void getUserEntityDetails(int id,
-      final UserDetailsCallback userDetailsCallback) {
-    this.restApi.getUserById(id, new RestApi.UserDetailsCallback() {
-      @Override public void onUserEntityLoaded(UserEntity userEntity) {
-        userDetailsCallback.onUserEntityLoaded(userEntity);
-        CloudUserDataStore.this.putUserEntityInCache(userEntity);
-      }
-
-      @Override public void onError(Exception exception) {
-        userDetailsCallback.onError(exception);
-      }
-    });
-  }
-
-  /**
-   * Saves a {@link UserEntity} into cache.
-   *
-   * @param userEntity The {@link UserEntity} to save.
-   */
-  private void putUserEntityInCache(UserEntity userEntity) {
-    if (userEntity != null) {
-      this.userCache.put(userEntity);
-    }
+  @Override public Observable<UserEntity> userEntityDetails(final int userId) {
+    return this.restApi.userEntityById(userId)
+        .doOnNext(saveToCacheAction);
   }
 }

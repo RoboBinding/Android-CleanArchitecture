@@ -11,40 +11,40 @@ import android.view.Window;
 
 import com.fernandocejas.android10.sample.presentation.R;
 import com.fernandocejas.android10.sample.presentation.model.UserModel;
-import com.fernandocejas.android10.sample.presentation.navigation.Navigator;
 import com.fernandocejas.android10.sample.presentation.view.fragment.UserListFragment;
 
 /**
  * Activity that shows a list of Users.
  */
-public class UserListActivity extends BaseActivity implements UserListFragment.UserListListener {
+public class UserListActivity extends BaseActivity implements
+    UserListFragment.UserListListener {
 
-    private Navigator navigator;
+  public static Intent getCallingIntent(Context context) {
+    return new Intent(context, UserListActivity.class);
+  }
 
-    public static Intent getCallingIntent(Context context) {
-        return new Intent(context, UserListActivity.class);
-    }
+//  private UserComponent userComponent;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
-        setContentView(R.layout.activity_user_list);
+  @Override protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
+    setContentView(R.layout.activity_user_list);
 
-        this.initialize();
-    }
+//    this.initializeInjector();
+  }
 
-    @Override
-    public void onUserClicked(UserModel userModel) {
-        this.navigator.navigateToUserDetails(this, userModel.getUserId());
-    }
+//  private void initializeInjector() {
+//    this.userComponent = DaggerUserComponent.builder()
+//        .applicationComponent(getApplicationComponent())
+//        .activityModule(getActivityModule())
+//        .build();
+//  }
 
-    /**
-     * Initializes activity's private members.
-     */
-    private void initialize() {
-        //This initialization should be avoided by using a dependency injection framework.
-        //But this is an example and for testing purpose.
-        this.navigator = new Navigator();
-    }
+//  @Override public UserComponent getComponent() {
+//    return userComponent;
+//  }
+
+  @Override public void onUserClicked(UserModel userModel) {
+    this.navigator.navigateToUserDetails(this, userModel.getUserId());
+  }
 }
