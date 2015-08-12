@@ -1,6 +1,17 @@
 /**
- * Copyright (C) 2014 android10.org. All rights reserved.
- * @author Fernando Cejas (the android10 coder)
+ * Copyright (C) 2015 Fernando Cejas Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.fernandocejas.android10.sample.data.cache;
 
@@ -10,21 +21,16 @@ import com.fernandocejas.android10.sample.data.entity.UserEntity;
 import com.fernandocejas.android10.sample.data.exception.UserNotFoundException;
 import com.fernandocejas.android10.sample.domain.executor.ThreadExecutor;
 import java.io.File;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import rx.Observable;
+import rx.Subscriber;
 
 /**
  * {@link UserCache} implementation.
  */
+@Singleton
 public class UserCacheImpl implements UserCache {
-
-  private static UserCacheImpl INSTANCE;
-
-  public static synchronized UserCacheImpl getInstance(Context context,
-      JsonSerializer userCacheSerializer, FileManager fileManager, ThreadExecutor threadExecutor) {
-    if (INSTANCE == null) {
-      INSTANCE = new UserCacheImpl(context, userCacheSerializer, fileManager, threadExecutor);
-    }
-    return INSTANCE;
-  }
 
   private static final String SETTINGS_FILE_NAME = "com.fernandocejas.android10.SETTINGS";
   private static final String SETTINGS_KEY_LAST_CACHE_UPDATE = "last_cache_update";
@@ -45,7 +51,8 @@ public class UserCacheImpl implements UserCache {
    * @param userCacheSerializer {@link JsonSerializer} for object serialization.
    * @param fileManager {@link FileManager} for saving serialized objects to the file system.
    */
-  private UserCacheImpl(Context context, JsonSerializer userCacheSerializer,
+  @Inject
+  public UserCacheImpl(Context context, JsonSerializer userCacheSerializer,
       FileManager fileManager, ThreadExecutor executor) {
     if (context == null || userCacheSerializer == null || fileManager == null || executor == null) {
       throw new IllegalArgumentException("Invalid null parameter");
@@ -57,29 +64,23 @@ public class UserCacheImpl implements UserCache {
     this.threadExecutor = executor;
   }
 
-  /**
-   * {@inheritDoc}
-   *
-   * @param userId The user id to retrieve data.
-   * @param callback The {@link UserCacheCallback} to notify the client.
-   */
-  @Override public synchronized void get(int userId, UserCacheCallback callback) {
-    File userEntitiyFile = this.buildFile(userId);
-    String fileContent = this.fileManager.readFileContent(userEntitiyFile);
-    UserEntity userEntity = this.serializer.deserialize(fileContent);
+  @Override public synchronized Observable<UserEntity> get(final int userId) {
+    return Observable.create(new Observable.OnSubscribe<UserEntity>() {
+      @Override public void call(Subscriber<? super UserEntity> subscriber) {
+        File userEntityFile = UserCacheImpl.this.buildFile(userId);
+        String fileContent = UserCacheImpl.this.fileManager.readFileContent(userEntityFile);
+        UserEntity userEntity = UserCacheImpl.this.serializer.deserialize(fileContent);
 
-    if (userEntity != null) {
-      callback.onUserEntityLoaded(userEntity);
-    } else {
-      callback.onError(new UserNotFoundException());
-    }
+        if (userEntity != null) {
+          subscriber.onNext(userEntity);
+          subscriber.onCompleted();
+        } else {
+          subscriber.onError(new UserNotFoundException());
+        }
+      }
+    });
   }
 
-  /**
-   * {@inheritDoc}
-   *
-   * @param userEntity Element to insert in the cache.
-   */
   @Override public synchronized void put(UserEntity userEntity) {
     if (userEntity != null) {
       File userEntitiyFile = this.buildFile(userEntity.getUserId());
@@ -92,22 +93,11 @@ public class UserCacheImpl implements UserCache {
     }
   }
 
-  /**
-   * {@inheritDoc}
-   *
-   * @param userId The id used to look for inside the cache.
-   * @return true if the element is cached, otherwise false.
-   */
   @Override public boolean isCached(int userId) {
     File userEntitiyFile = this.buildFile(userId);
     return this.fileManager.exists(userEntitiyFile);
   }
 
-  /**
-   * {@inheritDoc}
-   *
-   * @return true, the cache is expired, otherwise false.
-   */
   @Override public boolean isExpired() {
     long currentTime = System.currentTimeMillis();
     long lastUpdateTime = this.getLastCacheUpdateTimeMillis();
@@ -121,9 +111,6 @@ public class UserCacheImpl implements UserCache {
     return expired;
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override public synchronized void evictAll() {
     this.executeAsynchronously(new CacheEvictor(this.fileManager, this.cacheDir));
   }

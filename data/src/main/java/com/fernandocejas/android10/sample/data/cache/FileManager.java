@@ -1,6 +1,17 @@
 /**
- * Copyright (C) 2014 android10.org. All rights reserved.
- * @author Fernando Cejas (the android10 coder)
+ * Copyright (C) 2015 Fernando Cejas Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.fernandocejas.android10.sample.data.cache;
 
@@ -12,21 +23,17 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 
 /**
  * Helper class to do operations on regular files/directories.
  */
+@Singleton
 public class FileManager {
 
-  private FileManager() {}
-
-  private static class LazyHolder {
-    private static final FileManager INSTANCE = new FileManager();
-  }
-
-  public static FileManager getInstance() {
-    return LazyHolder.INSTANCE;
-  }
+  @Inject
+  public FileManager() {}
 
   /**
    * Writes a file to Disk.

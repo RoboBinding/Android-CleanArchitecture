@@ -1,6 +1,17 @@
 /**
- * Copyright (C) 2014 android10.org. All rights reserved.
- * @author Fernando Cejas (the android10 coder)
+ * Copyright (C) 2015 Fernando Cejas Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.fernandocejas.android10.sample.data.entity.mapper;
 
@@ -9,7 +20,8 @@ import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 import java.lang.reflect.Type;
-import java.util.Collection;
+import java.util.List;
+import javax.inject.Inject;
 
 /**
  * Class used to transform from Strings representing json to valid objects.
@@ -18,6 +30,7 @@ public class UserEntityJsonMapper {
 
   private final Gson gson;
 
+  @Inject
   public UserEntityJsonMapper() {
     this.gson = new Gson();
   }
@@ -41,18 +54,18 @@ public class UserEntityJsonMapper {
   }
 
   /**
-   * Transform from valid json string to Collection of {@link UserEntity}.
+   * Transform from valid json string to List of {@link UserEntity}.
    *
    * @param userListJsonResponse A json representing a collection of users.
-   * @return Collection of {@link UserEntity}.
+   * @return List of {@link UserEntity}.
    * @throws com.google.gson.JsonSyntaxException if the json string is not a valid json structure.
    */
-  public Collection<UserEntity> transformUserEntityCollection(String userListJsonResponse)
+  public List<UserEntity> transformUserEntityCollection(String userListJsonResponse)
       throws JsonSyntaxException {
 
-    Collection<UserEntity> userEntityCollection;
+    List<UserEntity> userEntityCollection;
     try {
-      Type listOfUserEntityType = new TypeToken<Collection<UserEntity>>() {}.getType();
+      Type listOfUserEntityType = new TypeToken<List<UserEntity>>() {}.getType();
       userEntityCollection = this.gson.fromJson(userListJsonResponse, listOfUserEntityType);
 
       return userEntityCollection;

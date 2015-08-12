@@ -1,5 +1,6 @@
 /**
  * Copyright (C) 2014 android10.org. All rights reserved.
+ *
  * @author Fernando Cejas (the android10 coder)
  */
 package com.fernandocejas.android10.sample.presentation.view.fragment;
@@ -9,33 +10,20 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.RelativeLayout;
-import android.widget.TextView;
 
-import com.fernandocejas.android10.sample.data.cache.FileManager;
-import com.fernandocejas.android10.sample.data.cache.UserCache;
-import com.fernandocejas.android10.sample.data.cache.UserCacheImpl;
-import com.fernandocejas.android10.sample.data.cache.serializer.JsonSerializer;
-import com.fernandocejas.android10.sample.data.entity.mapper.UserEntityDataMapper;
-import com.fernandocejas.android10.sample.data.executor.JobExecutor;
-import com.fernandocejas.android10.sample.data.repository.UserDataRepository;
-import com.fernandocejas.android10.sample.data.repository.datasource.UserDataStoreFactory;
-import com.fernandocejas.android10.sample.domain.exception.ErrorBundle;
-import com.fernandocejas.android10.sample.domain.executor.PostExecutionThread;
-import com.fernandocejas.android10.sample.domain.executor.ThreadExecutor;
-import com.fernandocejas.android10.sample.domain.interactor.GetUserDetailsUseCase;
-import com.fernandocejas.android10.sample.domain.interactor.GetUserDetailsUseCaseImpl;
-import com.fernandocejas.android10.sample.domain.repository.UserRepository;
 import com.fernandocejas.android10.sample.presentation.R;
-import com.fernandocejas.android10.sample.presentation.UIThread;
-import com.fernandocejas.android10.sample.presentation.exception.ErrorMessageFactory;
-import com.fernandocejas.android10.sample.presentation.mapper.UserModelDataMapper;
+import com.fernandocejas.android10.sample.presentation.internal.di.components.DaggerUserComponent;
+import com.fernandocejas.android10.sample.presentation.internal.di.components.UserComponent;
+import com.fernandocejas.android10.sample.presentation.internal.di.modules.UserModule;
+import com.fernandocejas.android10.sample.presentation.internal.di.modules.ViewModelModule;
+import com.fernandocejas.android10.sample.presentation.internal.di.modules.ViewModule;
 import com.fernandocejas.android10.sample.presentation.viewmodel.UserDetailsView;
-import com.fernandocejas.android10.sample.presentation.view.component.AutoLoadImageView;
 import com.fernandocejas.android10.sample.presentation.viewmodel.UserDetailsViewModel;
 
 import org.robobinding.ViewBinder;
+
+import javax.inject.Inject;
 
 /**
  * Fragment that shows details of a certain user.
@@ -45,7 +33,10 @@ public class UserDetailsFragment extends BaseFragment implements UserDetailsView
     private static final String ARGUMENT_KEY_USER_ID = "org.android10.ARGUMENT_USER_ID";
 
     private int userId;
-    private UserDetailsViewModel viewModel;
+
+    @Inject
+    UserDetailsViewModel viewModel;
+
     private RelativeLayout rl_progress;
 
     public UserDetailsFragment() {
@@ -86,28 +77,19 @@ public class UserDetailsFragment extends BaseFragment implements UserDetailsView
         this.viewModel.initialize(this.userId);
     }
 
-    @Override
-    protected void initializeViewModel() {
-        // All these dependency initialization could have been avoided using a
-        // dependency injection framework. But in this case are used this way for
-        // LEARNING EXAMPLE PURPOSE.
-        ThreadExecutor threadExecutor = JobExecutor.getInstance();
-        PostExecutionThread postExecutionThread = UIThread.getInstance();
+    private UserComponent userComponent;
+    private void initialize() {
+        this.userId = getArguments().getInt(ARGUMENT_KEY_USER_ID);
 
-        JsonSerializer userCacheSerializer = new JsonSerializer();
-        UserCache userCache = UserCacheImpl.getInstance(getActivity(), userCacheSerializer,
-                FileManager.getInstance(), threadExecutor);
-        UserDataStoreFactory userDataStoreFactory =
-                new UserDataStoreFactory(this.getContext(), userCache);
-        UserEntityDataMapper userEntityDataMapper = new UserEntityDataMapper();
-        UserRepository userRepository = UserDataRepository.getInstance(userDataStoreFactory,
-                userEntityDataMapper);
+        this.userComponent = DaggerUserComponent.builder()
+                .applicationComponent(getApplicationComponent())
+                .activityModule(getActivityModule())
+                .viewModelModule(new ViewModelModule())
+                .userModule(new UserModule(userId))
+                .viewModule(new ViewModule(this))
+                .build();
 
-        GetUserDetailsUseCase getUserDetailsUseCase = new GetUserDetailsUseCaseImpl(userRepository,
-                threadExecutor, postExecutionThread);
-        UserModelDataMapper userModelDataMapper = new UserModelDataMapper();
-
-        this.viewModel = new UserDetailsViewModel(this, getUserDetailsUseCase, userModelDataMapper);
+        userComponent.inject(this);
     }
 
     @Override
@@ -123,21 +105,22 @@ public class UserDetailsFragment extends BaseFragment implements UserDetailsView
     }
 
     @Override
-    public void showError(ErrorBundle errorBundle) {
-        String errorMessage = ErrorMessageFactory.create(getContext(),
-                errorBundle.getException());
+    public void showRetry() {
 
-        this.showToastMessage(errorMessage);
     }
 
-    private Context getContext() {
+    @Override
+    public void hideRetry() {
+
+    }
+
+    @Override
+    public void showError(String message) {
+        this.showToastMessage(message);
+    }
+
+    @Override
+    public Context getContext() {
         return getActivity().getApplicationContext();
-    }
-
-    /**
-     * Initializes fragment's private members.
-     */
-    private void initialize() {
-        this.userId = getArguments().getInt(ARGUMENT_KEY_USER_ID);
     }
 }

@@ -1,8 +1,10 @@
 package com.fernandocejas.android10.sample.presentation.viewmodel;
 
 import com.fernandocejas.android10.sample.domain.User;
+import com.fernandocejas.android10.sample.domain.exception.DefaultErrorBundle;
 import com.fernandocejas.android10.sample.domain.exception.ErrorBundle;
-import com.fernandocejas.android10.sample.domain.interactor.GetUserListUseCase;
+import com.fernandocejas.android10.sample.domain.interactor.DefaultSubscriber;
+import com.fernandocejas.android10.sample.domain.interactor.UseCase;
 import com.fernandocejas.android10.sample.presentation.exception.ErrorMessageFactory;
 import com.fernandocejas.android10.sample.presentation.mapper.UserModelDataMapper;
 import com.fernandocejas.android10.sample.presentation.model.UserModel;
@@ -24,7 +26,7 @@ import java.util.List;
 @PresentationModel
 public class UserListViewModel implements HasPresentationModelChangeSupport {
     private final UserListView userListView;
-    private final GetUserListUseCase getUserListUseCase;
+    private final UseCase getUserListUseCase;
     private final UserModelDataMapper userModelDataMapper;
 
     private boolean retryVisible;
@@ -32,7 +34,7 @@ public class UserListViewModel implements HasPresentationModelChangeSupport {
 
     private final PresentationModelChangeSupport changeSupport;
 
-    public UserListViewModel(UserListView userListView, GetUserListUseCase getUserListUserCase,
+    public UserListViewModel(UserListView userListView, UseCase getUserListUserCase,
                              UserModelDataMapper userModelDataMapper) {
         this.userListView = userListView;
         this.getUserListUseCase = getUserListUserCase;
@@ -76,23 +78,25 @@ public class UserListViewModel implements HasPresentationModelChangeSupport {
     }
 
     private void getUserList() {
-        this.getUserListUseCase.execute(userListCallback);
+        this.getUserListUseCase.execute(new UserListSubscriber());
     }
 
-    private final GetUserListUseCase.Callback userListCallback = new GetUserListUseCase.Callback() {
-        @Override
-        public void onUserListLoaded(Collection<User> usersCollection) {
-            UserListViewModel.this.showUsersCollectionInView(usersCollection);
+    private final class UserListSubscriber extends DefaultSubscriber<List<User>> {
+
+        @Override public void onCompleted() {
             UserListViewModel.this.hideViewLoading();
         }
 
-        @Override
-        public void onError(ErrorBundle errorBundle) {
+        @Override public void onError(Throwable e) {
             UserListViewModel.this.hideViewLoading();
-            UserListViewModel.this.showErrorMessage(errorBundle);
+            UserListViewModel.this.showErrorMessage(new DefaultErrorBundle((Exception) e));
             UserListViewModel.this.showViewRetry();
         }
-    };
+
+        @Override public void onNext(List<User> users) {
+            UserListViewModel.this.showUsersCollectionInView(users);
+        }
+    }
 
     private void showUsersCollectionInView(Collection<User> usersCollection) {
         final Collection<UserModel> userModelsCollection =
@@ -114,8 +118,14 @@ public class UserListViewModel implements HasPresentationModelChangeSupport {
         this.userListView.hideLoading();
     }
 
+//    private void showErrorMessage(ErrorBundle errorBundle) {
+//        this.userListView.showError(errorBundle);
+//    }
+
     private void showErrorMessage(ErrorBundle errorBundle) {
-        this.userListView.showError(errorBundle);
+        String errorMessage = ErrorMessageFactory.create(this.userListView.getContext(),
+                errorBundle.getException());
+        this.userListView.showError(errorMessage);
     }
 
     private void showViewRetry() {

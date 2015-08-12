@@ -1,47 +1,37 @@
 /**
- * Copyright (C) 2014 android10.org. All rights reserved.
- * @author Fernando Cejas (the android10 coder)
+ * Copyright (C) 2015 Fernando Cejas Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.fernandocejas.android10.sample.domain.repository;
 
 import com.fernandocejas.android10.sample.domain.User;
-import com.fernandocejas.android10.sample.domain.exception.ErrorBundle;
-import java.util.Collection;
+import java.util.List;
+import rx.Observable;
 
 /**
  * Interface that represents a Repository for getting {@link User} related data.
  */
 public interface UserRepository {
   /**
-   * Callback used to be notified when either a user list has been loaded or an error happened.
+   * Get an {@link rx.Observable} which will emit a List of {@link User}.
    */
-  interface UserListCallback {
-    void onUserListLoaded(Collection<User> usersCollection);
-
-    void onError(ErrorBundle errorBundle);
-  }
+  Observable<List<User>> users();
 
   /**
-   * Callback used to be notified when either a user has been loaded or an error happened.
-   */
-  interface UserDetailsCallback {
-    void onUserLoaded(User user);
-
-    void onError(ErrorBundle errorBundle);
-  }
-
-  /**
-   * Get a collection of {@link User}.
-   *
-   * @param userListCallback A {@link UserListCallback} used for notifying clients.
-   */
-  void getUserList(UserListCallback userListCallback);
-
-  /**
-   * Get an {@link User} by id.
+   * Get an {@link rx.Observable} which will emit a {@link User}.
    *
    * @param userId The user id used to retrieve user data.
-   * @param userCallback A {@link UserDetailsCallback} used for notifying clients.
    */
-  void getUserById(final int userId, UserDetailsCallback userCallback);
+  Observable<User> user(final int userId);
 }
